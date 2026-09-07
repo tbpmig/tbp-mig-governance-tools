@@ -1,0 +1,77 @@
+# Does the skill still quote the governing documents correctly?
+#
+# skills/tbp-governing-docs/references/amendment-authority.md quotes the chapter's
+# amendment clauses verbatim, so that when the skill tells an officer which body may
+# adopt something it cites real text. Those clauses live in a different repository and
+# are themselves amendable, so the quotes go stale silently — and a stale quote is
+# worse than none: it cites repealed wording with full confidence.
+#
+# This is the only thing tying the two repositories together, and it points one way
+# only. TBP-C-B knows nothing about this repo and needs no configuration. Nobody has
+# to remember to run anything.
+
+name: authority drift
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays 13:00 UTC. Weekly is the right cadence: an amendment lands at a voting
+    # meeting, not continuously, and a week is well inside the gap before anyone would
+    # rely on a quote.
+    - cron: '0 13 * * 1'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the skill
+        uses: actions/checkout@v4
+
+      - name: Clone the governing documents
+        # TBP-C-B is public, so a plain anonymous clone needs no token and grants this
+        # workflow no write access to it. Shallow: only the current text matters.
+        run: git clone --depth 1 https://github.com/tbpmig/TBP-C-B.git tbp-c-b
+
+      - name: Report which commit is being checked
+        run: |
+          echo "TBP-C-B main is at: $(git -C tbp-c-b log --oneline -1)"
+
+      - name: Verify every quoted clause still matches the tree
+        run: |
+          python3 skills/tbp-governing-docs/scripts/authority.py \
+            --repo tbp-c-b \
+            --reference skills/tbp-governing-docs/references/amendment-authority.md \
+            --check
+
+      - name: Explain a failure
+        if: failure()
+        run: |
+          echo "::error::A quoted amendment clause no longer matches TBP-C-B."
+          echo ""
+          echo "The tree is authoritative and this repository is a cache, so the fix is"
+          echo "to update references/amendment-authority.md to match the clause as it now"
+          echo "reads -- and to say which entries moved. A changed amendment clause is"
+          echo "news, not a typo fix: it may mean a different body now adopts something."
+          echo ""
+          echo "If the failure says a clause could not be READ rather than that a quote"
+          echo "drifted, a section was renamed or moved and the CLAUSES table in"
+          echo "skills/tbp-governing-docs/scripts/authority.py needs the new location."
+
+  package:
+    runs-on: ubuntu-latest
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the installable plugin
+        run: tools/package.sh
+      - name: Upload it
+        # So a future officer can download a known-good build from any green run,
+        # rather than hunting for a file someone sent in chat.
+        uses: actions/upload-artifact@v4
+        with:
+          name: tbp-mig-governance-plugin
+          path: dist/*.plugin
+          if-no-files-found: error

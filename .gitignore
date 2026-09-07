@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+*.plugin
+dist/
+
+# LaTeX build artefacts, in case anyone builds inside a scratch clone here
+*.aux
+*.log
+*.toc
+*.out
+*.cb
+*.cb2
+*.fls
+*.fdb_latexmk
+*.synctex.gz

@@ -1,0 +1,17 @@
+{
+  "name": "tbp-mig-governance",
+  "version": "0.1.4",
+  "description": "Amendment-grade editing of the Tau Beta Pi Michigan Gamma constitution, bylaws, appendices and financial policy in the TBP-C-B LaTeX repository.",
+  "author": {
+    "name": "Kyle Lady",
+    "email": "kylelady@gmail.com"
+  },
+  "keywords": [
+    "tau-beta-pi",
+    "governance",
+    "bylaws",
+    "latex",
+    "amendments"
+  ],
+  "license": "MIT"
+}
