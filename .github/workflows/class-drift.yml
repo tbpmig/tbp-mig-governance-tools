@@ -1,0 +1,49 @@
+# Is TBP-C-B still building against the class this skill documents?
+#
+# Separate from authority-drift.yml on purpose. That one asks whether the skill quotes
+# the governing documents correctly; this one asks whether the class those documents
+# build with is still the class the skill describes. Different subject, different fix,
+# and either should be disableable without the other.
+#
+# The interesting output is not "differs" but which direction:
+#
+#   behind    routine. The class was released and MI-G has not pulled yet.
+#   diverged  someone patched MI-G's copy directly, so the change exists nowhere else.
+#             This is the failure worth interrupting a person over.
+
+name: class drift
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Thursdays, deliberately offset from authority-drift.yml's Monday run so a quiet
+    # week produces two separate signals rather than one noisy morning.
+    - cron: '0 13 * * 4'
+  workflow_dispatch:
+
+jobs:
+  vendored-class:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Compare the vendored class against the class repository
+        id: check
+        run: tools/check-class-freshness.sh
+        # Both repositories are public, so this needs no token and grants no write
+        # access to either.
+
+      - name: Explain a failure
+        if: failure()
+        run: |
+          echo "::error::TBP-C-B's vendored bylaws.cls no longer matches tbpmig/latex-c-b."
+          echo ""
+          echo "Read the verdict in the step above. BEHIND is routine and means re-vendor"
+          echo "when convenient. DIVERGED means someone edited MI-G's copy directly, and"
+          echo "the change needs porting into the class repository before it is lost."
+          echo ""
+          echo "Either way, rebuild all three documents after re-vendoring and confirm the"
+          echo "rendered text is unchanged. A class change can move type without touching"
+          echo "a word of the source."
